@@ -18,10 +18,12 @@
 typedef NS_ENUM(NSInteger, TLTransport) {
     /// Bluetooth Low Energy connection
     TLTransportBluetoothLE,
-    /// Indirect connection to an instrument via ETI Web Service
+    
+    /// Indirect connection to an instrument via ETI Web Service - <b><i>devices using this transport are not supported by this version of ThermaLib</i></b>
     TLTransportCloudService,
-    /// Simulated device - not in current use
-    TLTransportSimulated
+    
+    /// Simulated - internal use only - <b><i>reserved for internal use</i></b>
+    TLTransportSimulated,
 };
 
 /// The kinds of quantity a sensor can measure
@@ -46,13 +48,16 @@ typedef NS_ENUM(NSInteger, TLDeviceType) {
     TLDeviceTypeThermaQBlue,
     /// ThermaPen Blue
     TLDeviceTypeThermaPenBlue,
-    /// ThermaQ WiFi
+    /// ThermaQ WiFi <i>- devices of this type are not supported by this version of ThermaLib</i>
     TLDeviceTypeThermaQWiFi,
-    /// ThermaData WiFi
+    /// ThermaData WiFi <i>- devices of this type are not supported by this version of ThermaLib</i>
     TLDeviceTypeThermaDataWiFi,
     /// RayTemp Blue
     TLDeviceTypeRayTempBlue,
-    /// Simulated
+    /// TempTest Blue
+    TLDeviceTypeTempTestBlue,
+    /// Dishtemp Blue
+    TLDeviceTypeDishTempBlue
 };
 
 /// Possible connection states
@@ -74,7 +79,9 @@ typedef NS_ENUM(NSInteger, TLDeviceConnectionState) {
     /// The device is known to ThermaLib but it is not currenctly supported. An update of the app, the device, or both may be required.
     TLDeviceConnectionStateUnsupported,
     /// The device is known to ThermaLib but the app has not yet been registered to receive information about the device. A {@link #requestDeviceAccess} call is required.
+    /// Currently only relevant for ThermaData and ThermaQ WiFi devices
     TLDeviceConnectionStateUnregistered
+    
 };
 
 /// Possible disconnection reasons
@@ -140,7 +147,7 @@ typedef NS_ENUM(NSInteger, TLDeviceNotificationType) {
     TLDeviceNotificationTypeInvalidSetting = 3,
     /// device received an invalid command
     TLDeviceNotificationTypeInvalidCommand = 4,
-    /// device requests app to re-read all data
+    /// device requests host app to re-read all data
     TLDeviceNotificationTypeRefreshRequest = 5,
     /// communication error detected
     TLDeviceNotificationTypeCommunicationError = 6,
@@ -170,47 +177,63 @@ typedef NS_ENUM(NSInteger, TLBatteryWarningLevel) {
 
 typedef NS_ENUM(NSInteger, TLDeviceFeature) {
     /**
-     * @brief the device can be requested to switch itself off after a set period of time
+     * @brief the device can be requested to switch itself off after a set period of time.
      *
-     * @see {@link TLDevice#autoOffInterval}
+     * Not available for all instruments.as
+     *
+     * @see {@link TLDevice.autoOffInterval}
      */
     TLDeviceFeatureAutoOff = 0x01,
     /**
-     * @brief the SDK polls for device updates. Currently true for Cloud devices
+     * @brief the SDK polls for device updates. Not used by this version of ThermaLib
      *
-     * @see {@link TLDevice#pollInterval}
+     * @see {@link TLDevice.pollInterval}
      */
     TLDeviceFeaturePolledDevice = 0x02,
     /**
-     * @brief the device has a settable emissivity. Relevant only for infrared devices,
-     * e.g. the Raytemp Blue
+     * @brief emissivity of the measured surface can be set. Currently only applies to {@link TLDeviceTypeRayTempBlue}
      *
-     * @see {@link TLDevice#emissivity}
+     * @see {@link TLDevice.emissivity}
      */
     TLDeviceFeatureEmissivity = 0x04,
     /**
-     * @brief the device has its own display. Most devices do, but the ThermaPen Blue,
-     * for example, doesn't.
+     * @brief the device has its own display. Most devices do, but the ThermaPen Blue, for example, doesn't.
      *
-     * @see {@link TLDevice#readingAsDisplayed}..
+     * @see {@link TLSensor.readingAsDisplayed}
      */
     TLDeviceFeatureDisplay = 0x08,
     /**
-     * @brief the device settings will take effect on the actual instrument
-     * some time after they are set locally.
+     * @brief <b>(Cloud devices only)</b> the device settings will take effect on the actual instrument
+     * some time after they are set locally. Not used by this version of ThermaLib.
      *
-     * Currently only relevant for Cloud devices. The actual delay depends on the
-     * transmission frequency (see TLDevice#transmissionInterval). Use TLDevice#remoteSettings
-     * to find the latest settings reported by the actual device. This can be used to
-     * identify which local settings have not yet taken effect on the actual instrument.
-     *
-     *
-     * @see {@link TLDevice#readingAsDisplayed}..
      */
     TLDeviceFeatureAsynchronousSettings = 0x10,
-    TLDeviceFeatureAlarm = 0x20
-    
+    /**
+     * @brief The device has its own alarm indication, for example on the LCD display or LEDs.
+     */
+    TLDeviceFeatureAlarm = 0x20,
+    /**
+     * @brief The device has per-sensor settable high and low alarm levels, that are stored in its non-volatile memory.
+     *
+     * @see {@link TLSensor.highAlarm}, {@link TLSensor.lowAlarm}
+     */
+    TLDeviceFeatureSettableAlarms = 0x40,
+
+    /**
+     * @brief The device stores and reports on-device the maximum reading so far.
+     *
+     * @see {@link TLSensor.resetMax}
+     */
+    TLDeviceFeatureMaxReading = 0x80,
+    /**
+     * @brief The device reports and reports on-device the minimum reading so far.
+     *
+     * @see {@link TLSensor.resetMin}
+     */
+    TLDeviceFeatureMinReading = 0x100
+
 };
+
 
 /// The `TLDevice` protocol encapsulates a device independently of the underlying connection type e.g. Bluetooth
 @protocol TLDevice <NSObject>
@@ -224,129 +247,149 @@ typedef NS_ENUM(NSInteger, TLDeviceFeature) {
 /// The model number of the device
 @property (strong, nonatomic, readonly) NSString *modelNumber;
 
-/// The protocol version of the device
+/// The protocol version of the device, if available, or a 0-length NSString
 @property (strong, nonatomic, readonly) NSString *protocolVersion;
 
-/// The hardware version of the device
+/// The hardware version of the device, if available, or a 0-length NSString
 @property (strong, nonatomic, readonly) NSString *hardwareVersion;
 
-/// The software revision of the device
+/// The software revision of the device, if available, or a 0-length NSString
 @property (strong, nonatomic, readonly) NSString *softwareRevision;
 
-/// The firmware revision of the device
+/// The firmware revision of the device, if available, or a 0-length NSString
 @property (strong, nonatomic, readonly) NSString *firmwareRevision;
 
 /// The transport type of the device e.g. Bluetooth
 @property (assign, nonatomic, readonly) TLTransport transportType;
 
-/// The device name
+/**
+ * @brief The device name.
+ *
+ * Note that for most devices this will be the same as the device name advertised at the Bluetooth level. However,
+ * for devices of type {@link TLDeviceTypeDishTempBlue} this method will instead report
+ * <pre>"<serial number> DishTemp Blue"</pre>, in order to uniquely identify the device, and be consistent with other
+ * devices supported by ThermaLib.
+ *
+ */
 @property (strong, nonatomic, readonly) NSString *deviceName;
 
-/// The device type
+/// The device type.
 @property (assign, nonatomic, readonly) TLDeviceType deviceType;
+
+/**
+ * @brief Array of {@link TLDeviceCommandType} values, specifying the commands available to this device that are not implemented by other methods.
+ *
+ * @see {@link TLDeviceCommandType}, {@link TLDevice#isSupportedCommand:}
+ */
+@property (nonatomic, readonly) NSArray *availableCommands;
+
+/// data timestamp. best estimate of the time when the current device/sensor data was collected.
+@property (nonatomic, readonly) NSDate *dataTimestamp;
+
+/// if true, alarm values are counted as in-bounds by the convenience computations offered by TLSensor.
+/**
+ * @brief determines whether readings that exactly match alarm settings are to count as in-bounds.
+ *
+ * If true, readings that exactly match alarm settings are counted as limits, i.e. (as in everyday usage) they do not indicate
+ * an alarm condition. Otherwise such values are counted as out-of-bounds.
+ */
+@property (assign, nonatomic) BOOL alarmSettingsAreLimits;
+
+/**
+ * @brief <b>(Cloud Devices Only)"</b> Defines how oftern ThermaLib requests updated information
+ * for the device. Not used in this variant of ThermaLib.
+ *
+ */
+@property (readwrite, nonatomic, assign) NSUInteger pollInterval;
 
 /**
  * @brief The features that this device has.
  *
  * This is a bitwise OR of the values defined in #TLDeviceFeature.
  */
-@property (assign, nonatomic, readonly) int features;
+@property (assign, nonatomic, readonly) NSInteger features;
 
 /**
  * @brief The device identifier
  *
  * For Bluetooth devices, this is a UUID assigned by iOS at discovery time.
  * Only use this identifier for Bluetooth devices if you are sure it meets your requirements in terms of scope and stability.
- * (See https://developer.apple.com/reference/corebluetooth/cbperipheral/1518935-identifier). For a globally unique and stable identifier, use the serialNumber property.
- * 
- * For cloud devices this property is identical to the serialNumber property
+ * (See https://developer.apple.com/reference/corebluetooth/cbperipheral/1518935-identifier). For a globally unique and stable identifier, use TLDevice.serialNumber once known.
  */
 @property (strong, nonatomic, readonly) NSString *deviceIdentifier;
 
-/// The string representation of deviceType
+/// The string representation of the generic device type, for example "ThermaPen Blue"
 @property (strong, nonatomic, readonly) NSString *deviceTypeName;
 
-/// The sensors included in the device
+/**
+ * @brief Array of TLSensor objects representing the sensors attached to the device
+ *
+ * Note, will not be populated until TLDevice.ready is set to YES
+ */
 @property (strong, nonatomic, readonly) NSArray<id<TLSensor>> *sensors;
 
 /**
- * @brief (Deprecated) The temperature unit the device is using.
- * @return TLDeviceUnit The unit for the device.
- * @deprecated Please use #displayUnitForGenericSensorType and #setDisplayUnitForGenericSensorType
+ * @brief The last RSSI reported by the device
+ *
+ * @see TLDevice.updateRSSI
  */
-@property (assign, nonatomic) TLDeviceUnit unit __deprecated_msg("The latest device ranges support mixed sensor types. This attribute is retained for backward compatibility, but will report the unit in which the device will report temperatures only. Use TLSensor.getDisplayUnit, TLDevice.displayUnitForGenericSensorType, TLDevice.setDisplayUnitForGenericSensorType");
-
-/**
- * @brief The interval between measurements recorded by the device (in seconds). For some devices (e.g. Bluetooth LowEnergy) this and
- * transmissionInterval are identical, i.e. changes to one will be reflected in the other.
- */
-@property (assign, nonatomic) NSInteger measurementInterval;
-
-/**
- * @brief The interval between transmissions from the device to the host (in seconds). For some devices (e.g. Bluetooth LowEnergy) this and
- * measurementInterval are identical, i.e. changes to one will be reflected in the other.
- */
-@property (assign, nonatomic) NSInteger transmissionInterval;
-
-/// The time internal for switching the device off (in minutes)
-@property (assign, nonatomic) NSInteger autoOffInterval;
-
-/// For infra-red devices, the emissivity in the range [0.1, 1]. Not used for other device types
-@property (assign, nonatomic) float emissivity;
-
-/// The last RSSI reported by the device
 @property (strong, nonatomic, readonly) NSNumber *rssi;
 
-/// The current battery level of the device
+/**
+ *@brief Current battery level.
+ *
+ * For all devices except the DishTemp Blue, this is a notional percentage of full charge. For the DishTemp Blue device, which reports battery level in a different way,
+ * this attribute should be ignored.
+ */
 @property (assign, nonatomic, readonly) NSInteger batteryLevel;
 
-/// The current battery warning level of the device
+/**
+ * @brief The battery warning level.
+ *
+ * Different devices have different battery types, with different discharge characteristics. There is therefore no single rule that correlates .batteryLevel with the need to replace.
+ * This method has been provided to give the most reliable indication available of battery condition, and the value returned will in general reflect the battery condition icon on
+ * the device's display, if it has one.
+ */
 @property (assign, nonatomic, readonly) TLBatteryWarningLevel batteryWarningLevel;
 
 /// The connection state of the device
 @property (assign, nonatomic, readonly) TLDeviceConnectionState connectionState;
 
-/// Returns the next transmission time. Only used currently for cloud devices
+/// <b>(Cloud Devices Only)"</b> Returns the device's next transmission time. Not relevant to this release of ThermaLib
 @property (nonatomic, readonly) NSDate * nextTransmissionTime;
 
-/// Whether the device is ready. Implies that the device is connected and all settings have been read and processed
+/// <b>(Cloud Devices Only)"</b> Returns the device's last transmission time. Not relevant to this release of ThermaLib
+@property (nonatomic, readonly) NSDate * lastTransmissionTime;
+
+/// <b>(Cloud Devices Only)"</b> Returns the time the device's settings were last changed. Not relevant to this release of ThermaLib
+@property (nonatomic, readonly) NSDate * settingsLastChangedTime;
+
+/// Whether the device is ready. Implies that the device is connected and all settings have been read and processed. A device's attributes should only be regarded as up to date and reliable if this attribute is YES.
 @property (assign, nonatomic, readonly, getter=isReady) BOOL ready;
 
 /// Whether the user has requested that the device be disconnected, to contrast with unexpected disconnections
 @property (assign, nonatomic, readonly) BOOL userRequestedDisconnect;
 
-/// the last settings reported by the device. Only used currently for cloud devices
-@property (nonatomic, readonly) id<TLRemoteSettings> remoteSettings;
-
-/// whether the device is connected
+/// whether the device is connected at the Bluetooth level. Note that even when a device is connected, the state of attributes presented by this API should be regarded as undefined if .ready is set to NO.
 @property (assign, readonly, getter=isConnected) BOOL connected;
 
-/// number of sensors the device can physically accommodate
+/// number of sensors the device can physically accommodate.
 @property (assign, readonly) NSInteger maxSensorCount;
 
-/**
- * @brief Defines how oftern ThermaLib requests updated information
- * for the device.
- *
- * Only appropriate for devices for which #hasFeature(TLDeviceFeaturePolledDevice)
- * returns YES.
- *
- * The poll interval is in seconds. An interval of 0 means ThermaLib will
- * not poll the device
- */
-@property (readwrite, nonatomic, assign) NSUInteger pollInterval;
+/// suppoerted commands. Array of NSNumber to be interpreted as TLDeviceCommandType
+@property (strong, nonatomic, readonly) NSArray *supportedCommands;
 
 /**
  * @brief the sensor at the given index
  *
- * @param index index of the sensor (1-based)
+ * @param index index of the sensor. <i>Note that index is 1-based, in contrast to the Android version of the library, which is 0-based.</i>
  */
 - (id<TLSensor>)sensorAtIndex:(NSUInteger)index;
 
 /**
  * @brief whether the given sensor is enabled
  *
- * @param index index of the sensor (1-based)
+ * @param index index of the sensor <i>Note that index is 1-based, in contrast to the Android version of the library, which is 0-based.</i>
  */
 - (BOOL)isSensorEnabledAtIndex:(NSUInteger)index;
 
@@ -360,8 +403,15 @@ typedef NS_ENUM(NSInteger, TLDeviceFeature) {
  */
 - (void)sendCommand:(TLDeviceCommandType)command;
 
-/// Requests all values to be read from the device
+/// Requests that all data is re-requested. This is an asynchronous call, which on completion will cause one of the notifications specified in ThermaLIb.h to be sent.
 - (void)refresh;
+
+#ifdef THERMALIB_CLOUD
+/// sends settings that have not so far been sent. Only effective for WiFi devices - in other cases, property
+/// settings are immediate.
+
+- (void)commitSettings;
+#endif
 
 /**
  * @brief Resets a device by wiping any stored data in the sdk.
@@ -371,12 +421,78 @@ typedef NS_ENUM(NSInteger, TLDeviceFeature) {
 
 
 /**
+ * @brief Check to see whether the device has a specific feature.
+ *
+ * @param feature The feature to check
+ * @return BOOL if the device has the specific feature
+ */
+-(BOOL) hasFeature:(TLDeviceFeature) feature;
+
+-(BOOL) isSupportedCommand:(TLDeviceCommandType) commandType;
+
+/**
+ * @brief (Deprecated) The temperature unit the device is using.
+ *
+ * Prefer TLDevice.temperatureDisplayUnit
+ */
+@property (assign, nonatomic) TLDeviceUnit unit;
+
+/**
+ * @brief The unit the device is using to display temperatures. The latest device ranges support mixed sensor types. This attribute is retained for backward compatibility, but will report the unit in which the device will report temperatures only.
+ */
+@property (assign, nonatomic) TLDeviceUnit temperatureDisplayUnit;
+
+/**
+ * @brief The interval between measurements recorded by the device (in seconds).
+ *
+ * Note: for DishTemp Blue devices (see {@link TLDeviceType}) the measurement interval is fixed at 1 second, and assigning to this attribute will have no effect.
+ * For other Bluetooth LE devices the measurement and transmission intervals are locked together, so assigning or reading one will have the same
+ * effect as assigning or reading the other.
+ */
+@property (assign, nonatomic) NSInteger measurementInterval;
+
+/**
+ * @brief The interval between transmissions from the device to the host (in seconds)
+ *
+ * Note: for DishTemp Blue devices (see {@link TLDeviceType}) the transmission interval may be set, but is defined as a write-only attribute by the device. Writing to the attribute
+ * will have the expected effect, but reading it will return the value -1
+ *
+ * For other Bluetooth LE devices the measurement and transmission intervals are locked together, so assigning or reading one will have the same
+ * effect as assigning or reading the other.
+ *
+ * For devices other than the DishTemp Blue, a measurement/transmission interval of 0 means don't transmit at a fixed interval. In this case measurements are obtained
+ * by a) pressing a button on the unit, which will cause an iOS notification of type {@link ThermaLibNotificationReceivedNotificationName} to be delivered to the app,
+ * or b) the app sending a command of type {@link TLDeviceCommandTypeMeasure} using {@link TLDevice.sendCommand:}
+ */
+@property (assign, nonatomic) NSInteger transmissionInterval;
+
+/**
+ * @brief The time internal for switching the device off (in minutes). Note that a value of 0 means that the device will not automatically switch itself off.
+ *
+ * Not all devices support this feature. See {@link TLDeviceFeatureAutoOff}, TLDevice.hasFeature:
+ *
+ */
+@property (assign, nonatomic) NSInteger autoOffInterval;
+
+/**
+ * @brief The emissivity of the surface being measured, in the range [0.1, 1]. <i>Currently RayTemp Blue devices only</i>
+ * @see {@link TLDeviceFeatureEmissivity}, TLDevice.hasFeature
+ */
+@property (assign, nonatomic) float emissivity;
+
+#ifdef THERMALIB_CLOUD
+/// the last settings reported by the device. Only used currently for cloud devices
+@property (nonatomic, readonly) id<TLRemoteSettings> remoteSettings;
+#endif
+
+/**
  * @brief The current display unit for the given generic sensor type.
  *
  * The unit configured for display of readings of that generic type.
- * This does not affect the unit in which #reading is expressed, which
+ *
+ * <i>This does not affect the unit in which #reading is represented, which
  * is fixed for a given generic sensor type, i.e. for temperature sensors,
- * #reading will always represent the temperature in degrees Celsius.
+ * #reading will always be the temperature in degrees Celsius.</i>
  *
  * @param genericType The generic sensor type
  * @return TLDeviceUnit The display unit for the specified generic sensor type.
@@ -384,7 +500,7 @@ typedef NS_ENUM(NSInteger, TLDeviceFeature) {
 -(TLDeviceUnit)displayUnitForGenericSensorType:(TLGenericSensorType)genericType;
 
 /**
- * @brief Sets the unit for the given generic sensor type. (Currently only relevant for temperature sensors.)
+ * @brief Sets the unit for the given generic sensor type. (Currently alternative values are only available for temperature sensors.)
  *
  * This currently is used only for setting the Temperature unit.
  * @param genericType The generic sensor type
@@ -394,12 +510,6 @@ typedef NS_ENUM(NSInteger, TLDeviceFeature) {
                                      unit:(TLDeviceUnit)unit;
 
 
-/**
- * @brief Check to see whether the device has a specific feature.
- *
- * @param feature The feature to check
- * @return BOOL if the device has the specific feature
- */
--(BOOL) hasFeature:(int) feature;
+
 
 @end

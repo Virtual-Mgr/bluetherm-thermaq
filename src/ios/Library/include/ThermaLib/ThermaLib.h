@@ -9,6 +9,7 @@
 
 #import "TLDevice.h"
 
+
 // The below use @param documentors for clarity to document members of the corresponding NSNotification object.
 // the pragmas are to eliminate the warnings this non-standard use of @param would otherwise generate
 //
@@ -17,7 +18,7 @@
 
 /**
  * @brief Notification that a new device is discovered during a scan.
- * @param object The {@link TLDevice.h TLDevice} that was discovered.
+ * @param object The {@link TLDevice} that was discovered.
  * @param userInfo NSDictionary containing:
  *
  * Key           | Value
@@ -34,6 +35,7 @@ FOUNDATION_EXPORT NSString *const ThermaLibNewDeviceFoundNotificationName;
  * Key           | Value
  * ------------- | -------------
  * ThermaLibNotificationTimestampKey  | Notification timestamp as an NSDate *
+ * ThermaLibNotificationReceivedNotificationTypeKey  | Notification timestamp as an NSDate *
  */
 FOUNDATION_EXPORT NSString *const ThermaLibNotificationReceivedNotificationName;
 
@@ -50,10 +52,31 @@ FOUNDATION_EXPORT NSString *const ThermaLibNotificationTimestampKey;
 /**
  * @brief User info dictionary key for the TLDeviceNotificationType.
  *
- * @discussion This is used in notification's userInfo dictionary for ThermaLibNotificationReceivedNotificationName
+ * @details This is used in notification's userInfo dictionary for ThermaLibNotificationReceivedNotificationName
  * @see ThermaLibNotificationReceivedNotificationName
  */
 FOUNDATION_EXPORT NSString *const ThermaLibNotificationReceivedNotificationTypeKey;
+
+/**
+ * @brief User info dictionary key for TLTransport.
+ *
+ * @details Used where the {@link TLTransport} is passed in the userInfo NSDictionary as an NSNumber wrapping the TLTransport as an NSInteger
+ */
+FOUNDATION_EXPORT NSString *const ThermaLibNotificationTransportTypeKey;
+
+/**
+ * @brief User info dictionary key for Service Reachability.
+ *
+ * @details Used where the service reachability is passed in the userInfo NSDictionary as an NSNumber wrapping a BOOL value
+ */
+FOUNDATION_EXPORT NSString *const ThermaLibNotificationServiceReachabilityKey;
+
+/**
+ * @brief User info dictionary key for Failure reason text
+ *
+ * @details Used whereever a textual reason is expected in the userInfo of the notification
+ */
+FOUNDATION_EXPORT NSString *const ThermaLibNotificationFailureReasonKey;
 
 /**
  * @brief Notification that a device sent battery level notification
@@ -71,7 +94,7 @@ FOUNDATION_EXPORT NSString *const ThermaLibBatteryLevelNotificationName;
 /**
  * @brief Notification that an update was received for the device
  *
- * @discussion This may be the result of a read request or a write request
+ * @details This may be the result of a read request or a write request
  * @param object The {@link TLDevice.h TLDevice} that was updated.
  * @param userInfo NSDictionary with keys and values:
  *
@@ -102,22 +125,71 @@ FOUNDATION_EXPORT NSString *const ThermaLibDeviceDisconnectionNotificationName;
 /**
  * @brief User info dictionary key for the reason for the device disconnection.
  *
- * @discussion This is used as a key in the notification's userInfo dictionary for ThermaLibDeviceDisconnectionNotificationName.
+ * @details This is used as a key in the notification's userInfo dictionary for ThermaLibDeviceDisconnectionNotificationName.
  *      The corresponding value is an NSNumber whose integerValue is eqquivalent to a {@link TLDeviceDisconnectionReason}
  * @see ThermaLibDeviceDisconnectionNotificationName
  **/
 FOUNDATION_EXPORT NSString *const ThermaLibDeviceDisconnectionNotificationReasonKey;
 
 /**
- * @brief Notification that a service has been connected.
+ * @brief Notification of the completion of a service connection request..
  *
  * @param object an NSString * containing the key to be used in subsequent #requestAccessToDevice calls. Note that
  * this should be persisted, for example via NSUserDefaults, and subsequently reused in calls to #connectToService,
- * if access to device is to be persistent between client app sessions.
+ * if access to device is to be persistent between client app sessions. If the connection failed, or a key is not required for this transport, this will be nil.
+ * NB This notification does not say which {@link TLTransport} it refers to.
  *
- * @param userInfo not used
+ * For multiple-transport usages, listen instead for {@link ThermaLibServiceConnectionSucceededNotificationName},
+ * {@link ThermaLibServiceConnectionFailedNotificationName}
+ *
+ * @param userInfo NSDictionary, only present if the connection request failed, containing:
+ *
+ * Key                                      | Value
+ * ---------------------------------------- | -------------
+ * ThermaLibNotificationFailureReasonKey    | an NSString * with a textual description of the reason for failure. May be nil if a reason cannot be supplied.
  **/
 FOUNDATION_EXPORT NSString *const ThermaLibServiceConnectedNotificationName;
+
+/**
+ * @brief Notification of the result of a service connection failure.
+ *
+ * @param object If successful, and the request is to a service that requires a key, this be an NSString contraining the key to be used in subsequent #requestAccessToDevice calls. Note that
+ * this should be persisted, for example via NSUserDefaults, and subsequently reused in calls to #connectToService, Otherwise, this will be nil. *
+ * @param userInfo NSDictionary containing:
+ *
+ * Key                                      | Value
+ * ---------------------------------------- | -------------
+ * ThermaLibNotificationTransportTypeKey    | NSNumber * wrapping {@link TLTransport} as an NSInteger
+ * ThermaLibNotificationFailureReasonKey    | an NSString * with a textual description of the reason for failure. May be nil if a reason cannot be supplied
+ **/
+FOUNDATION_EXPORT NSString *const ThermaLibServiceConnectionFailedNotificationName;
+
+/**
+ * @brief Notification of the result of a service connection success.
+ *
+ * @param object if request is to a service that requires a key, this be an NSString contraining the key to be used in subsequent #requestAccessToDevice calls. Note that
+ * this should be persisted, for example via NSUserDefaults, and subsequently reused in calls to #connectToService
+ * @param userInfo NSDictionary containing:
+ *
+ * Key                                      | Value
+ * ---------------------------------------- | -------------
+ * ThermaLibNotificationTransportTypeKey    | NSNumber * wrapping {@link TLTransport} as an NSInteger
+ **/
+FOUNDATION_EXPORT NSString *const ThermaLibServiceConnectionSucceededNotificationName;
+
+/**
+ * @brief Notification that a service's reachability has changed.
+ *
+ * @param object unused
+ * @param userInfo NSDictionary containing:
+ *
+ * Key                                      | Value
+ * ---------------------------------------- | -------------
+ * ThermaLibNotificationTimestampKey        | Notification timestamp as an NSDate *
+ * ThermaLibNotificationTransportTypeKey    | NSNumber * wrapping {@link TLTransport} as an NSInteger
+ * ThermaLibNotificationReachabilityKey     | NSNumber * wrapping new reachability as a BOOL
+ */
+FOUNDATION_EXPORT NSString *const ThermaLibServiceReachabilityChangedNotificationName;
 
 /**
  * @brief Notification that a device was deleted.
@@ -134,7 +206,7 @@ FOUNDATION_EXPORT NSString *const ThermaLibDeviceDeletedNotificationName;
 /**
  * @brief Notification that the RSSI value for a device has been updated.
  *
- * @discussion The new level can be read from the device object sent with the notification.
+ * @details The new level can be read from the device object sent with the notification.
  * @param object The {@link TLDevice.h TLDevice} that sent the updated value.
  * @param userInfo NSDictionary containing:
  *
@@ -146,48 +218,10 @@ FOUNDATION_EXPORT NSString *const ThermaLibDeviceDeletedNotificationName;
 
 FOUNDATION_EXPORT NSString *const ThermaLibRSSINotificationName;
 
-
-/**
- * @brief Notification of successful device registration (Cloud devices only).
- *
- * @param object The {@link TLDevice.h TLDevice} that was registered.
- * @param userInfo NSDictionary containing:
- *
- * Key           | Value
- * ------------- | -------------
- * ThermaLibNotificationTimestampKey  | Notification timestamp as an NSDate *
- */
-FOUNDATION_EXPORT NSString *const ThermaLibDeviceRegistrationCompleteNotificationName;
-
-/**
- * @brief Notification of failure of device registration (Cloud devices only).
- *
- * @param object The {@link TLDevice.h TLDevice} for which registration failed.
- * @param userInfo NSDictionary containing:
- *
- * Key           | Value
- * ------------- | -------------
- * ThermaLibNotificationTimestampKey  | Notification timestamp as an NSDate *
- */
-FOUNDATION_EXPORT NSString *const ThermaLibDeviceRegistrationFailNotificationName;
-
-/**
- * @brief Notification that new remote settings for a device were received.
- *
- * @discussion The new settings can be read from the device object sent with the notification. see {@link TLDevice#remoteSettings}
- * @param object The {@link TLDevice.h TLDevice} whose settings were received. Note that this does not imply that the remote settings changed.
- * @param userInfo NSDictionary containing:
- *
- * Key           | Value
- * ------------- | -------------
- * ThermaLibNotificationTimestampKey  | Notification timestamp as an NSDate *
- */
-FOUNDATION_EXPORT NSString *const ThermaLibRemoteSettingsChangedNotificationName;
-
 /**
  * @brief User info dictionary key for the new RSSI value.
  *
- * @discussion This is used in notification's userInfo dictionary for ThermaLibRSSINotificationName
+ * @details This is used in notification's userInfo dictionary for ThermaLibRSSINotificationName
  * @see ThermaLibRSSINotificationName
  **/
 FOUNDATION_EXPORT NSString *const ThermaLibRSSINotificationKey;
@@ -203,6 +237,18 @@ FOUNDATION_EXPORT NSString *const ThermaLibRSSINotificationKey;
  * ThermaLibNotificationTimestampKey  | Notification timestamp as an NSDate *
  */
 FOUNDATION_EXPORT NSString *const ThermaLibSensorUpdatedNotificationName;
+
+/**
+ * @brief Notification that a scan was completed
+ *
+ * @param object not used
+ * @param userInfo NSDictionary containing:
+ *
+ * Key           | Value
+ * ------------- | -------------
+ * ThermaLibNotificationTransportTypeKey  | Transport type of the completed scan, as an NSNumber (->NSInteger)
+ */
+FOUNDATION_EXPORT NSString *const ThermaLibScanCompletedNotificationName;
 
 #pragma clang diagnostic pop
 
@@ -247,7 +293,8 @@ FOUNDATION_EXPORT NSString *const ThermaLibSensorUpdatedNotificationName;
  * @param transport only scan for devices that communicate over this transport
  * @param retrieveSystemConnections if YES then will additionally discover devices with which
  *          iOS has a cached connection with. Currently this parameter only has an effect for
- *          Bluetooth LE devices. (iOS uses a shared connection architecture, and so be aware that
+ *          Bluetooth LE devices (Except the DishTemp Blue).
+ *          (iOS uses a shared connection architecture, and so be aware that
  *          devices retrieved in this way may be connected to by other apps at the same time.)
  */
 -(void)startDeviceScanWithTransport: (TLTransport)transport retrieveSystemConnections:(BOOL)retrieveSystemConnections;
@@ -292,10 +339,10 @@ FOUNDATION_EXPORT NSString *const ThermaLibSensorUpdatedNotificationName;
  *
  * @param identifier The identifier to search for
  * @return The device if found in ThermaLib's list, otherwise nil.
- * @deprecated Since identifiers are only guaranteed to be unique for a given {@link TLTransportType},
+ * @deprecated Since identifiers are only guaranteed to be unique for a given {@link TLTransport},
  * use #deviceWithIdentifier:transport: instead.
  */
-- (id<TLDevice>)deviceWithIdentifier:(NSString *)identifier;
+- (id<TLDevice>)deviceWithIdentifier:(NSString *)identifier __attribute__((deprecated));
 
 /**
  * @brief search for a device of a given identifier and transport type in ThermaLib's list.
@@ -306,10 +353,11 @@ FOUNDATION_EXPORT NSString *const ThermaLibSensorUpdatedNotificationName;
  * @return the TLDevice object if it exists, otherwise nil
  */
 - (id<TLDevice>)deviceWithIdentifier:(NSString *)identifier transport:(TLTransport)transport;
+
 /**
- * @brief Request connection to a device
+ * @brief Request connection to a device for reading data and changing settings.
  *
- * @param device The device to connect to.
+ * @param device The device to connect to
  */
 - (void)connectToDevice:(id<TLDevice>)device;
 
@@ -333,6 +381,15 @@ FOUNDATION_EXPORT NSString *const ThermaLibSensorUpdatedNotificationName;
 - (void)removeDevice:(id<TLDevice>)device;
 
 /**
+ * @brief Removes all devices from the list of discovered devices
+ *
+ * Equivalent to calling {@link removeDevice} for all discovered devices
+ *
+ * @param device The device to remove
+ */
+- (void)removeAllDevices;
+
+/**
  * @brief Tests the reachability of a service. (Cloud devices only)
  * @param transport transport type to test
  * 
@@ -352,47 +409,32 @@ FOUNDATION_EXPORT NSString *const ThermaLibSensorUpdatedNotificationName;
  */
 -(void)connectToService:(TLTransport) transport usingKey:(NSString *)appKey;
 
-/**
- * @brief Request access to the given device (Cloud only). This requests that the associated
- *      service allows this app to access the device. Currently only Read/Write access is
- *      supported.
- *
- * @param device The device access is requested for
- * @param accessKey The key to use for access. This will have been generated by
- * a previous request to {@link #connectToService}.
- */
-
--(void)requestDeviceAccess:(id<TLDevice>)device
-       accessKey:(id) accessKey;
-
-/**
- * @brief revokes access to a device (Cloud only)
- *
- * @param device The device to revoke access from
- */
-
--(void)revokeDeviceAccess:(id<TLDevice>)device;
 
 /**
  * @brief Create a TLDevice object with the given name, identifier and transport type.
  * @param name the name to be associated with the newly-created device
  * @param identifier the identifier for the new device. (Device identifiers are unique for a given transport type
  * @param transport the transport type
- * 
- * @return the newly created device, or nil on failure, for example if a device object already exists with the 
+ *
+ * @return the newly created device, or nil on failure, for example if a device object already exists with the
  *          same identifier and transport
  */
 - (id<TLDevice>) createDeviceWithName:(NSString *)name identifier:(NSString *)identifier transport:(TLTransport) transport;
 
 
 /**
- * @brief tests whether the service is connected for a given transport. Currently only relevant for
- * Cloud devices
+ * @brief tests whether the service is connected for a given transport. 
  *
  * @param transport The transport type
  */
 -(BOOL) isServiceConnected: (TLTransport)transport;
 
-
-
 @end
+
+#ifdef THERMALIB_CLOUD
+#import "ThermaLib_Cloud.h"
+#endif
+
+#ifdef THERMALIB_MONITOR
+#import "ThermaLib_Monitor.h"
+#endif

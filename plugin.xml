@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<plugin id="bluetherm-thermaq" version="1.1.4" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+<plugin id="bluetherm-thermaq" version="1.2.0"
+  xmlns="http://apache.org/cordova/ns/plugins/1.0"
+  xmlns:android="http://schemas.android.com/apk/res/android">
   <name>BlueThermThermaQ</name>
   <js-module name="BlueThermThermaQ" src="www/BlueThermThermaQ.js">
     <clobbers target="cordova.plugins.BlueThermThermaQ" />
@@ -12,13 +14,11 @@
     </config-file>
     <source-file src="src/ios/Library/libThermaLib.a" framework="true" />
     <header-file src="src/ios/Library/include/ThermaLib/ThermaLib.h"/>
+    <header-file src="src/ios/Library/include/ThermaLib/TLConstants.h"/>
     <header-file src="src/ios/Library/include/ThermaLib/TLDateStamp.h"/>
     <header-file src="src/ios/Library/include/ThermaLib/TLDevice.h"/>
     <header-file src="src/ios/Library/include/ThermaLib/TLRange.h"/>
-    <header-file src="src/ios/Library/include/ThermaLib/TLRemoteSettings.h"/>
     <header-file src="src/ios/Library/include/ThermaLib/TLSensor.h"/>
-    <header-file src="src/ios/Library/include/ThermaLib/TLSimDevice.h"/>
-    <header-file src="src/ios/Library/include/ThermaLib/TLSimSensor.h"/>
     <header-file src="src/ios/Library/include/ThermaLib/TLUtils.h"/>
     <source-file src="src/ios/BlueThermThermaQ.m" />
   </platform>

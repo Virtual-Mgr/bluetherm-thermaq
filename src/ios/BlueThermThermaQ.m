@@ -5,7 +5,7 @@
 #import "TLDevice.h"
 #import "TLSensor.h"
 
-#define PLUGIN_VERSION @"1.1.3"
+#define PLUGIN_VERSION @"1.2.0"
 
 typedef void (^FnUpdate)(void);
 
@@ -24,6 +24,8 @@ NSString* stringFromTLDeviceType(TLDeviceType deviceType) {
         return @"ThermaQBlue";
         case TLDeviceTypeRayTempBlue:
         return @"RayTempBlue";
+        case TLDeviceTypeDishTempBlue:
+        return @"DishTempBlue";
         default:
         return @"Unknown";
     }

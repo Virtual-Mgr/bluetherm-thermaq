@@ -20,6 +20,7 @@
 */
 @property (assign) float high;
 
+-(BOOL) containsValue:(float)value;
 /**
 * @brief Create a range with the current high an low values
 * @param low The low value of the range
@@ -28,6 +29,7 @@
 */
 +(TLRange *) newWithLow: (float)low
                    high: (float)high;
+
 
 /**
 * @brief Return the range in the units specified. Currently used for converting from C to F and back.
