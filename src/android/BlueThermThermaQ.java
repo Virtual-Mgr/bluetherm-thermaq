@@ -1,5 +1,6 @@
 package BlueThermThermaQ;
 
+import android.bluetooth.le.ScanResult;
 import android.telecom.Call;
 
 import org.apache.cordova.CordovaInterface;
@@ -7,6 +8,7 @@ import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 
 import org.apache.cordova.CordovaWebView;
+import org.apache.cordova.LOG;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -27,7 +29,9 @@ import static uk.co.etiltd.thermalib.Sensor.NO_VALUE;
 * This class echoes a string called from JavaScript.
 */
 public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientCallbacks {
-	private final String PLUGIN_VERSION = "1.1.3";
+	private final String PLUGIN_VERSION = "1.2.0";
+
+	private static final String LOGTAG = "BlueThermThermaQ";
 
 	private ThermaLib _thermaLib;
 	private Object _registerHandle;
@@ -73,6 +77,8 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 		super.initialize(cordova, webView);
 
 		_thermaLib = ThermaLib.instance(cordova.getActivity());
+		LOG.i(LOGTAG, "Using ThermaLib version " + _thermaLib.getVersionNumber());
+
 		_registerHandle = _thermaLib.registerCallbacks(this, "BlueThermThermaQ");
 	}
 
@@ -525,7 +531,7 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 	}
 
 	@Override
-	public void onRefreshComplete(Device device, long timestamp) {
+	public void onRefreshComplete(Device device, boolean b, long l) {
 		deviceResult(device, "deviceUpdated");
 	}
 
@@ -536,6 +542,7 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 
 	@Override
 	public void onScanComplete(int errorCode, int deviceCount) {
+		LOG.e(LOGTAG, "onScanComplete deviceCount = " + deviceCount + " errorCode = " + errorCode);
 		if (_callbackContext != null) {
 			JSONArray replies = new JSONArray();
 			JSONObject msg = new JSONObject();
@@ -557,7 +564,11 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 			result.setKeepCallback(true);
 			_callbackContext.sendPluginResult(result);
 		}
+	}
 
+	@Override
+	public void onScanComplete(int i, ThermaLib.ScanResult scanResult, int i1, String s) {
+		LOG.e(LOGTAG, "onScanComplete " + s + " scanResult = " + scanResult.getDesc());
 	}
 
 	@Override
@@ -608,5 +619,29 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 	@Override
 	public void onUnexpectedDeviceDisconnection(Device device, long timestamp) {
 		deviceResult(device, "unexpectedDisconnect");
+	}
+
+	@Override
+	public void onUnexpectedDeviceDisconnection(Device device, String msg, DeviceDisconnectionReason reason, long l) {
+		deviceResult(device, "unexpectedDisconnect");
+	}
+
+	@Override
+	public void onRemoteSettingsReceived(Device device) {
+	}
+
+	@Override
+	public void onDeviceRevokeRequestComplete(Device device, boolean test, String msg) {
+
+	}
+
+	@Override
+	public void onDeviceAccessRequestComplete(Device device, boolean test, String msg) {
+
+	}
+
+	@Override
+	public void onRequestServiceComplete(int i, boolean test, String msg1, String msg2) {
+
 	}
 }
