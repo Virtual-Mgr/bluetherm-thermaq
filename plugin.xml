@@ -31,7 +31,7 @@
     <config-file parent="/*" target="AndroidManifest.xml">
     </config-file>
     <framework src="src/android/thermalib.gradle" custom="true" type="gradleReference" />
-    <lib-file src="src/android/thermalib-release.aar" />
+    <lib-file src="src/android/thermalib.aar" />
     <source-file src="src/android/BlueThermThermaQ.java" target-dir="src/BlueThermThermaQ" />
   </platform>
 </plugin>
