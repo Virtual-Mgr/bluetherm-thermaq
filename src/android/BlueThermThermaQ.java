@@ -1,7 +1,10 @@
 package BlueThermThermaQ;
 
 import android.bluetooth.le.ScanResult;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.telecom.Call;
+import android.widget.Toast;
 
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
@@ -9,6 +12,7 @@ import org.apache.cordova.CallbackContext;
 
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.LOG;
+import org.apache.cordova.PermissionHelper;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -18,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import VirtualManagerBLE.VirtualManagerBLE;
 import uk.co.etiltd.thermalib.Device;
 import uk.co.etiltd.thermalib.Sensor;
 import uk.co.etiltd.thermalib.ThermaLib;
@@ -145,99 +150,192 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 		return jobj;
 	}
 
+	private class ExecuteHandler {
+		String action;
+		JSONArray args;
+		CallbackContext callbackContext;
+		public ExecuteHandler(String action, JSONArray args, CallbackContext callbackContext) {
+			this.action = action;
+			this.args = args;
+			this.callbackContext = callbackContext;
+		}
+
+		public boolean execute() throws JSONException {
+			if (action.equals("registerCallback")) {
+				registerCallback(callbackContext);
+				return true;
+			} else if (action.equals("startScan")) {
+				if (args.length() >= 1) {
+					int timeoutMilliseconds = args.getInt(0);
+					startScan(timeoutMilliseconds, callbackContext);
+				} else {
+					callbackContext.error("timeout required");
+				}
+				return true;
+			} else if (action.equals("stopScan")) {
+				stopScan(callbackContext);
+				return true;
+			} else if (action.equals("getDeviceList")) {
+				getDeviceList(callbackContext);
+				return true;
+			} else if (action.equals("device_refresh")) {
+				String deviceId;
+				if (args.length() >= 1) {
+					deviceId = args.getString(0);
+					device_refresh(deviceId, callbackContext);
+				} else {
+					callbackContext.error("deviceId required");
+				}
+				return true;
+			} else if (action.equals("device_connect")) {
+				String deviceId;
+				if (args.length() >= 1) {
+					deviceId = args.getString(0);
+					device_connect(deviceId, callbackContext);
+				} else {
+					callbackContext.error("deviceId required");
+				}
+				return true;
+			} else if (action.equals("device_disconnect")) {
+				String deviceId;
+				if (args.length() >= 1) {
+					deviceId = args.getString(0);
+					device_disconnect(deviceId, callbackContext);
+				} else {
+					callbackContext.error("deviceId required");
+				}
+				return true;
+			} else if (action.equals("device_measure")) {
+				String deviceId;
+				if (args.length() >= 1) {
+					deviceId = args.getString(0);
+					device_measure(deviceId, callbackContext);
+				} else {
+					callbackContext.error("deviceId required");
+				}
+				return true;
+			} else if (action.equals("device_identify")) {
+				String deviceId;
+				if (args.length() >= 1) {
+					deviceId = args.getString(0);
+					device_identify(deviceId, callbackContext);
+				} else {
+					callbackContext.error("deviceId required");
+				}
+				return true;
+			} else if (action.equals("device_delete")) {
+				String deviceId;
+				if (args.length() >= 1) {
+					deviceId = args.getString(0);
+					device_delete(deviceId, callbackContext);
+				} else {
+					callbackContext.error("deviceId required");
+				}
+				return true;
+			} else if (action.equals("device_configure")) {
+				if (args.length() >= 1) {
+					String deviceId = args.getString(0);
+					if (args.length() >= 2) {
+						JSONObject options = args.getJSONObject(1);
+						device_configure(deviceId, options, callbackContext);
+					} else {
+						callbackContext.error("options required");
+					}
+				} else {
+					callbackContext.error("deviceId required");
+				}
+				return true;
+			} else if (action.equals("getVersion")) {
+				JSONObject msg = new JSONObject();
+				msg.put("platform", "Android");
+				msg.put("version", PLUGIN_VERSION);
+				callbackContext.success(msg);
+				return true;
+			}
+			return false;
+		}
+	}
+
+	private HashMap<Integer, ExecuteHandler> _executeHandlers = new HashMap<Integer, ExecuteHandler>();
+
+	@Override
+	public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
+		ExecuteHandler handler = null;
+		synchronized (_executeHandlers) {
+			handler = _executeHandlers.remove(requestCode);
+		}
+		if (handler != null) {
+			String denied = "";
+			for(int i = 0 ; i < permissions.length ; i++) {
+				if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+					if (denied.length() != 0) {
+						denied += ", ";
+					}
+					denied += permissions[i];
+				}
+			}
+			if (denied.length() > 0) {
+				String msg = "Permissions denied " + denied;
+				handler.callbackContext.error(msg);
+
+				Toast.makeText(this.cordova.getActivity().getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+			} else {
+				handler.execute();
+			}
+		}
+	}
+
 	@Override
 	public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+		// Any action which touches BLUETOOTH permissions will be done through ExecuteHandler to check permissions
+		ExecuteHandler handler = null;
 		if (action.equals("registerCallback")) {
 			this.registerCallback(callbackContext);
 			return true;
 		} else if (action.equals("startScan")) {
-			if (args.length() >= 1) {
-				int timeoutMilliseconds = args.getInt(0);
-				this.startScan(timeoutMilliseconds, callbackContext);
-			} else {
-				callbackContext.error("timeout required");
-			}
-			return true;
+			handler = new ExecuteHandler(action, args, callbackContext);
 		} else if (action.equals("stopScan")) {
-			this.stopScan(callbackContext);
-			return true;
+			handler = new ExecuteHandler(action, args, callbackContext);
 		} else if (action.equals("getDeviceList")) {
-			this.getDeviceList(callbackContext);
-			return true;
+			handler = new ExecuteHandler(action, args, callbackContext);
 		} else if (action.equals("device_refresh")) {
-			String deviceId;
-			if (args.length() >= 1) {
-				deviceId = args.getString(0);
-				this.device_refresh(deviceId, callbackContext);
-			} else {
-				callbackContext.error("deviceId required");
-			}
-			return true;
+			handler = new ExecuteHandler(action, args, callbackContext);
 		} else if (action.equals("device_connect")) {
-			String deviceId;
-			if (args.length() >= 1) {
-				deviceId = args.getString(0);
-				this.device_connect(deviceId, callbackContext);
-			} else {
-				callbackContext.error("deviceId required");
-			}
-			return true;
+			handler = new ExecuteHandler(action, args, callbackContext);
 		} else if (action.equals("device_disconnect")) {
-			String deviceId;
-			if (args.length() >= 1) {
-				deviceId = args.getString(0);
-				this.device_disconnect(deviceId, callbackContext);
-			} else {
-				callbackContext.error("deviceId required");
-			}
-			return true;
+			handler = new ExecuteHandler(action, args, callbackContext);
 		} else if (action.equals("device_measure")) {
-			String deviceId;
-			if (args.length() >= 1) {
-				deviceId = args.getString(0);
-				this.device_measure(deviceId, callbackContext);
-			} else {
-				callbackContext.error("deviceId required");
-			}
-			return true;
+			handler = new ExecuteHandler(action, args, callbackContext);
 		} else if (action.equals("device_identify")) {
-			String deviceId;
-			if (args.length() >= 1) {
-				deviceId = args.getString(0);
-				this.device_identify(deviceId, callbackContext);
-			} else {
-				callbackContext.error("deviceId required");
-			}
-			return true;
+			handler = new ExecuteHandler(action, args, callbackContext);
 		} else if (action.equals("device_delete")) {
-			String deviceId;
-			if (args.length() >= 1) {
-				deviceId = args.getString(0);
-				this.device_delete(deviceId, callbackContext);
-			} else {
-				callbackContext.error("deviceId required");
-			}
-			return true;
+			handler = new ExecuteHandler(action, args, callbackContext);
 		} else if (action.equals("device_configure")) {
-			if (args.length() >= 1) {
-				String deviceId = args.getString(0);
-				if (args.length() >= 2) {
-					JSONObject options = args.getJSONObject(1);
-					this.device_configure(deviceId, options, callbackContext);
-				} else {
-					callbackContext.error("options required");
-				}
-			} else {
-				callbackContext.error("deviceId required");
-			}
-			return true;
+			handler = new ExecuteHandler(action, args, callbackContext);
 		} else if (action.equals("getVersion")) {
 			JSONObject msg = new JSONObject();
 			msg.put("platform", "Android");
 			msg.put("version", PLUGIN_VERSION);
 			callbackContext.success(msg);
+			return true;
 		}
 
+		if (handler != null) {
+			if (Build.VERSION.SDK_INT >= 31) {
+				if (PermissionHelper.hasPermission(this, "BLUETOOTH_SCAN")) {
+					return handler.execute();
+				} else {
+					int requestCode = 0;
+					synchronized (_executeHandlers) {
+						requestCode = _executeHandlers.size();
+						_executeHandlers.put(requestCode, handler);
+					}
+					PermissionHelper.requestPermission(this, requestCode, "BLUETOOTH_SCAN");
+				}
+			} else {
+				return handler.execute();
+			}
+		}
 		return false;
 	}
 
