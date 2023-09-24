@@ -6,7 +6,11 @@ repositories{
 }
 
 dependencies {
-   implementation (name:'thermalib', ext:'aar')
+  implementation (name:'thermalib', ext:'aar')
+  implementation fileTree(include: ['*.jar'], dir: 'libs')
+  implementation 'androidx.appcompat:appcompat:1.5.1'
+  implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+  implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
 }
 
 android {
