@@ -38,6 +38,12 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 
 	private static final String LOGTAG = "BlueThermThermaQ";
 
+	// permissions
+	private static final String ACCESS_BACKGROUND_LOCATION = "android.permission.ACCESS_BACKGROUND_LOCATION"; // API 29
+	private static final String BLUETOOTH_CONNECT = "android.permission.BLUETOOTH_CONNECT"; // API 31
+	private static final String BLUETOOTH_SCAN = "android.permission.BLUETOOTH_SCAN"; // API 31
+	private static final String ACCESS_FINE_LOCATION = "android.permission.ACCESS_FINE_LOCATION"; // API 30
+
 	private ThermaLib _thermaLib;
 	private Object _registerHandle;
 	private CallbackContext _callbackContext;
