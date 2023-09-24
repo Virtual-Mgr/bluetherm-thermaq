@@ -31,8 +31,8 @@ import uk.co.etiltd.thermalib.ThermaLibException;
 import static uk.co.etiltd.thermalib.Sensor.NO_VALUE;
 
 /**
-* This class echoes a string called from JavaScript.
-*/
+ * This class echoes a string called from JavaScript.
+ */
 public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientCallbacks {
 	private final String PLUGIN_VERSION = "1.2.0";
 
@@ -87,8 +87,7 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 		_registerHandle = _thermaLib.registerCallbacks(this, "BlueThermThermaQ");
 	}
 
-	private static JSONObject MakeJSONDevice(Device device)
-	{
+	private static JSONObject MakeJSONDevice(Device device) {
 		JSONObject jobj = new JSONObject();
 		try {
 			jobj.put("id", device.getDeviceAddress());
@@ -126,8 +125,7 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 		return jobj;
 	}
 
-	private static JSONObject MakeJSONSensor(Sensor sensor) throws JSONException
-	{
+	private static JSONObject MakeJSONSensor(Sensor sensor) throws JSONException {
 		JSONObject jobj = new JSONObject();
 		jobj.put("index", sensor.getIndex());
 		jobj.put("enabled", sensor.isEnabled());
@@ -146,7 +144,7 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 		}
 		jobj.put("fault", sensor.isFault());
 		jobj.put("trimValue", sensor.getTrimValue());
-		//jobj.put("trimValueDate", sensor.getTrimSetDate());
+		// jobj.put("trimValueDate", sensor.getTrimSetDate());
 		return jobj;
 	}
 
@@ -154,6 +152,7 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 		String action;
 		JSONArray args;
 		CallbackContext callbackContext;
+
 		public ExecuteHandler(String action, JSONArray args, CallbackContext callbackContext) {
 			this.action = action;
 			this.args = args;
@@ -259,14 +258,15 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 	private HashMap<Integer, ExecuteHandler> _executeHandlers = new HashMap<Integer, ExecuteHandler>();
 
 	@Override
-	public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
+	public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults)
+			throws JSONException {
 		ExecuteHandler handler = null;
 		synchronized (_executeHandlers) {
 			handler = _executeHandlers.remove(requestCode);
 		}
 		if (handler != null) {
 			String denied = "";
-			for(int i = 0 ; i < permissions.length ; i++) {
+			for (int i = 0; i < permissions.length; i++) {
 				if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
 					if (denied.length() != 0) {
 						denied += ", ";
@@ -287,7 +287,8 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 
 	@Override
 	public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-		// Any action which touches BLUETOOTH permissions will be done through ExecuteHandler to check permissions
+		// Any action which touches BLUETOOTH permissions will be done through
+		// ExecuteHandler to check permissions
 		ExecuteHandler handler = null;
 		if (action.equals("registerCallback")) {
 			this.registerCallback(callbackContext);
@@ -321,9 +322,23 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 		}
 
 		if (handler != null) {
+			ArrayList<String> missingPermissions = new ArrayList<>();
 			int targetVersion = cordova.getContext().getApplicationInfo().targetSdkVersion;
-			if (targetVersion >= 31 && Build.VERSION.SDK_INT >= 31) {
-				if (PermissionHelper.hasPermission(this, "BLUETOOTH_SCAN")) {
+			if (targetVersion >= Build.VERSION_CODES.R && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+				missingPermissions.add(ACCESS_FINE_LOCATION);
+			}
+			if (targetVersion >= Build.VERSION_CODES.S && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				missingPermissions.add(BLUETOOTH_SCAN);
+				missingPermissions.add(BLUETOOTH_CONNECT);
+			}
+			if (missingPermissions.size() > 0) {
+				ArrayList<String> requiredPermissions = new ArrayList<>();
+				for (String permission : missingPermissions) {
+					if (!PermissionHelper.hasPermission(this, permission)) {
+						requiredPermissions.add(permission);
+					}
+				}
+				if (requiredPermissions.size() == 0) {
 					return handler.execute();
 				} else {
 					int requestCode = 0;
@@ -331,7 +346,8 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 						requestCode = _executeHandlers.size();
 						_executeHandlers.put(requestCode, handler);
 					}
-					PermissionHelper.requestPermission(this, requestCode, "BLUETOOTH_SCAN");
+					PermissionHelper.requestPermissions(this, requestCode, requiredPermissions.toArray(new String[0]));
+					return true;
 				}
 			} else {
 				return handler.execute();
@@ -340,7 +356,8 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 		return false;
 	}
 
-	private void device_configure(String deviceId, JSONObject options, final CallbackContext callbackContext) throws JSONException {
+	private void device_configure(String deviceId, JSONObject options, final CallbackContext callbackContext)
+			throws JSONException {
 		final Device device = _thermaLib.getDeviceWithAddress(deviceId);
 		if (device == null) {
 			callbackContext.error("Device not found");
@@ -348,23 +365,24 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 			callbackContext.error("Device not connected");
 		} else {
 			if (options.has("measurementMilliseconds")) {
-				device.setMeasurementInterval((options.getInt("measurementMilliseconds") + 1000 - 1) / 1000);	 // Round up
+				device.setMeasurementInterval((options.getInt("measurementMilliseconds") + 1000 - 1) / 1000); // Round
+																												// up
 			}
 
 			if (options.has("autoOffSeconds")) {
-				device.setAutoOffInterval((options.getInt("autoOffSeconds") + 60 - 1) / 60);	// Round up
+				device.setAutoOffInterval((options.getInt("autoOffSeconds") + 60 - 1) / 60); // Round up
 			}
 
 			if (options.has("sensors")) {
 				JSONArray sensorsConfig = options.getJSONArray("sensors");
-				for(int i = 0 ; i < sensorsConfig.length() ; i++) {
+				for (int i = 0; i < sensorsConfig.length(); i++) {
 					JSONObject sensorConfig = sensorsConfig.getJSONObject(i);
 					if (!sensorConfig.has("index")) {
 						callbackContext.error("Sensor.index required");
 						return;
 					}
 
-					Sensor sensor = device.getSensor(sensorConfig.getInt("index"));		// 0 based
+					Sensor sensor = device.getSensor(sensorConfig.getInt("index")); // 0 based
 					if (sensor == null) {
 						callbackContext.error("Sensor not found");
 						return;
@@ -391,7 +409,7 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 					}
 
 					if (sensorConfig.has("trimValue")) {
-						sensor.setTrimValue((float)sensorConfig.getDouble("trimValue"));
+						sensor.setTrimValue((float) sensorConfig.getDouble("trimValue"));
 					}
 				}
 			}
@@ -623,7 +641,7 @@ public class BlueThermThermaQ extends CordovaPlugin implements ThermaLib.ClientC
 
 		ArrayList<Runnable> fns = getQueue(device.getDeviceAddress(), "deviceUpdated", false);
 		if (fns != null) {
-			for(Runnable r : fns) {
+			for (Runnable r : fns) {
 				r.run();
 			}
 		}

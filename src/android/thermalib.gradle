@@ -6,7 +6,7 @@ repositories{
 }
 
 dependencies {
-   compile(name:'thermalib', ext:'aar')
+   implementation (name:'thermalib', ext:'aar')
 }
 
 android {
