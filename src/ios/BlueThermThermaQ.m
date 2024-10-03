@@ -5,7 +5,7 @@
 #import "TLDevice.h"
 #import "TLSensor.h"
 
-#define PLUGIN_VERSION @"1.2.0"
+#define PLUGIN_VERSION @"1.3.0"
 
 typedef void (^FnUpdate)(void);
 
@@ -659,11 +659,12 @@ NSMutableDictionary* MakeJSONDevice(id<TLDevice> device)
         } else {
             [device sendCommand: TLDeviceCommandTypeMeasure];
 
+            // Seems Thermalib 1.1.3 now sends a deviceUpdated event when a measurement is received instead of a sensorUpdated event            
             __weak BlueThermThermaQ* weakSelf = self;
             [self queueUpdate:^{
                 CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus: CDVCommandStatus_OK messageAsDictionary:MakeJSONDevice(device)];
                 [weakSelf.commandDelegate sendPluginResult: pluginResult callbackId: command.callbackId];
-            } forDeviceId:device.deviceIdentifier withMethod:@"sensorUpdated"];
+            } forDeviceId:device.deviceIdentifier withMethod:@"deviceUpdated"];
         }
     }
 
